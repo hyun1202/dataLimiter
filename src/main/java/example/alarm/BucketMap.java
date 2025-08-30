@@ -17,8 +17,8 @@ public class BucketMap {
     // 각 파라미터 조합별로 개별 버킷 관리
     private final Cache<Integer, Bucket> buckets = Caffeine.newBuilder()
             .maximumSize(1000)
-            .expireAfterWrite(Duration.ofMinutes(CACHE_EXPIRE_MIN))
-//            .expireAfterWrite(Duration.ofSeconds(5))
+//            .expireAfterWrite(Duration.ofMinutes(CACHE_EXPIRE_MIN))
+            .expireAfterWrite(Duration.ofSeconds(5))
             .build();
 
 
@@ -30,8 +30,8 @@ public class BucketMap {
         // 30분 동안 5개 허용하는 버킷 생성
         Bandwidth limit = Bandwidth.builder()
                 .capacity(TOKEN_LIMIT)
-                .refillIntervally(TOKEN_LIMIT, Duration.ofMinutes(TOKEN_REFILL_MIN))
-//                .refillIntervally(TOKEN_LIMIT, Duration.ofSeconds(5))
+//                .refillIntervally(TOKEN_LIMIT, Duration.ofMinutes(TOKEN_REFILL_MIN))
+                .refillIntervally(TOKEN_LIMIT, Duration.ofSeconds(5))
                 .build();
 
         return Bucket.builder()
