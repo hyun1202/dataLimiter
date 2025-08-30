@@ -1,0 +1,5 @@
+### 요청
+GET localhost:8080/api/error?filename=index.html1&message=undefindValue{}
+
+### 남은 토큰
+GET localhost:8080/api/alarm?filename=index.html1&message=undefindValue{}
