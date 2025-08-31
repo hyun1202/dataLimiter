@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rate Limit 모니터링 대시보드</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -71,6 +72,85 @@
         .stat-card.blocked .number { color: #e74c3c; }
         .stat-card.active .number { color: #2ecc71; }
 
+        .top3-section {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .top3-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .top3-card {
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .top3-card.first {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        }
+
+        .top3-card.second {
+            background: linear-gradient(135deg, #C0C0C0 0%, #A9A9A9 100%);
+        }
+
+        .top3-card.third {
+            background: linear-gradient(135deg, #CD7F32 0%, #B8860B 100%);
+        }
+
+        .top3-rank {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .top3-filename {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .top3-count {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .top3-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .chart-section {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-top: 20px;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
         .controls {
             background: rgba(255, 255, 255, 0.95);
             padding: 20px;
@@ -131,6 +211,154 @@
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
             gap: 20px;
+        }
+
+        .table-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            display: none;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .data-table th {
+            background: rgba(52, 73, 94, 0.1);
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .data-table td {
+            font-size: 0.9rem;
+            color: #34495e;
+        }
+
+        .data-table tr:hover {
+            background: rgba(52, 152, 219, 0.05);
+        }
+
+        .table-filename {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .table-message {
+            color: #7f8c8d;
+            font-style: italic;
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .table-status {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .table-status.blocked {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .table-status.active {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+
+        .table-tokens {
+            font-weight: bold;
+        }
+
+        .table-tokens.zero {
+            color: #e74c3c;
+        }
+
+        .table-tokens.low {
+            color: #f39c12;
+        }
+
+        .table-tokens.good {
+            color: #27ae60;
+        }
+
+        .table-requests {
+            font-weight: bold;
+            color: #e67e22;
+        }
+
+        .table-countdown {
+            font-weight: 600;
+            color: #e74c3c;
+            font-size: 0.85rem;
+        }
+
+        .filters {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .filter-input {
+            padding: 10px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            width: 250px;
+            transition: border-color 0.3s ease;
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .filter-label {
+            font-weight: 600;
+            color: #333;
+            font-size: 0.9rem;
+        }
+
+        .view-mode-toggle {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
         }
 
         .data-card {
@@ -281,34 +509,12 @@
             margin: 20px 0;
             text-align: center;
         }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 0 10px;
-            }
-
-            .header h1 {
-                font-size: 2rem;
-            }
-
-            .stats {
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            }
-
-            .sort-buttons {
-                flex-direction: column;
-            }
-
-            .data-grid {
-                grid-template-columns: 1fr;
-            }
-        }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="header">
-        <h1>🚦 Rate Limit 모니터링 대시보드</h1>
+        <h1>Rate Limit 모니터링 대시보드</h1>
         <p>실시간 요청 제한 현황 및 통계</p>
     </div>
 
@@ -327,13 +533,53 @@
         </div>
     </div>
 
+    <div class="top3-section">
+        <h3>TOP 3 요청 파일</h3>
+        <div id="top3Grid" class="top3-grid"></div>
+    </div>
+
+    <div class="chart-section">
+        <h3>데이터 차트</h3>
+        <div class="view-toggle">
+            <button class="btn primary active" onclick="changeChart('requestCount')">요청 수</button>
+            <button class="btn primary" onclick="changeChart('resetTime')">남은 시간</button>
+            <button class="btn primary" onclick="changeChart('tokens')">토큰 상태</button>
+        </div>
+        <div id="chartContainer" class="chart-container">
+            <canvas id="requestChart"></canvas>
+        </div>
+    </div>
+
+    <div class="filters">
+        <h3>검색 및 필터</h3>
+        <div class="filter-row">
+            <div class="filter-group">
+                <label class="filter-label">검색:</label>
+                <input type="text" id="searchInput" class="filter-input" placeholder="파일명 또는 메시지 검색..." oninput="applyFilters()">
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">상태:</label>
+                <select id="statusFilter" class="filter-input" onchange="applyFilters()" style="width: 150px;">
+                    <option value="all">전체</option>
+                    <option value="active">활성</option>
+                    <option value="blocked">차단됨</option>
+                </select>
+            </div>
+        </div>
+        <div class="view-mode-toggle">
+            <button class="btn primary" onclick="changeViewMode('card')">카드 보기</button>
+            <button class="btn primary active" onclick="changeViewMode('table')">테이블 보기</button>
+        </div>
+    </div>
+
     <div class="controls">
-        <h3>정렬 옵션</h3>
+        <h3>카드 정렬</h3>
         <div class="sort-buttons">
-            <button class="btn primary active" onclick="sortData('requestCount')">요청 수 순</button>
-            <button class="btn primary" onclick="sortData('blocked')">차단된 항목</button>
-            <button class="btn primary" onclick="sortData('resetTime')">리셋 시간 순</button>
-            <button class="btn refresh-btn" onclick="loadData()">🔄 새로고침</button>
+            <button class="btn primary active" onclick="sortCards('requestCount')">요청 수 순</button>
+            <button class="btn primary" onclick="sortCards('blocked')">차단된 항목만</button>
+            <button class="btn primary" onclick="sortCards('active')">활성 항목만</button>
+            <button class="btn primary" onclick="sortCards('resetTime')">리셋 시간 순</button>
+            <button class="btn refresh-btn" onclick="refreshData()">새로고침</button>
         </div>
     </div>
 
@@ -346,60 +592,131 @@
     </div>
 
     <div id="dataGrid" class="data-grid" style="display: none;"></div>
+
+    <div id="tableContainer" class="table-container" style="display: block;">
+        <table class="data-table">
+            <thead>
+            <tr>
+                <th>파일명</th>
+                <th>메시지</th>
+                <th>상태</th>
+                <th>토큰</th>
+                <th>요청수</th>
+                <th>리셋시간</th>
+                <th>남은시간</th>
+            </tr>
+            </thead>
+            <tbody id="tableBody">
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <script>
-    let currentData = [];
+    let allData = [];
+    let filteredData = [];
     let currentSort = 'requestCount';
+    let myChart = null;
+    let chartType = 'requestCount';
+    let viewMode = 'table';
+    let searchTerm = '';
+    let statusFilter = 'all';
 
-    // 페이지 로드시 데이터 로드
+    // 페이지 시작
     document.addEventListener('DOMContentLoaded', function() {
-        loadData();
-        // 30초마다 자동 새로고침
-        setInterval(loadData, 30000);
-        // 1초마다 카운트다운 업데이트
+        refreshData();
+        setInterval(refreshData, 30000);
         setInterval(updateCountdowns, 1000);
     });
 
-    // API에서 데이터 로드
-    async function loadData() {
+    // 데이터 로드
+    async function refreshData() {
         try {
             document.getElementById('loading').style.display = 'block';
             document.getElementById('error').style.display = 'none';
-            document.getElementById('dataGrid').style.display = 'none';
 
             const response = await fetch('http://localhost:8080/api/report/all');
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+                throw new Error('HTTP ' + response.status);
             }
 
             const data = await response.json();
-            currentData = data;
-            if (data === null || data === "undefined" || data?.length <= 0) {
-                document.getElementById('loading').style.display = 'none';
+            allData = data;
+            applyFilters();
+
+            showStats();
+            showTop3();
+            showChart();
+
+            document.getElementById('loading').style.display = 'none';
+            if (viewMode === 'card') {
                 document.getElementById('dataGrid').style.display = 'grid';
-                return;
+                document.getElementById('tableContainer').style.display = 'none';
+            } else {
+                document.getElementById('dataGrid').style.display = 'none';
+                document.getElementById('tableContainer').style.display = 'block';
             }
 
-            updateStats();
-            sortData(currentSort);
-
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('dataGrid').style.display = 'grid';
-
         } catch (error) {
-            console.error('데이터 로드 실패:', error);
+            console.error('로드 실패:', error);
             document.getElementById('loading').style.display = 'none';
             document.getElementById('error').style.display = 'block';
-            document.getElementById('error').textContent =
-                `데이터를 불러오는데 실패했습니다: ${error.message}`;
+            document.getElementById('error').textContent = '데이터 로드 실패: ' + error.message;
         }
     }
 
-    // 통계 업데이트
-    function updateStats() {
-        const total = currentData.length;
-        const blocked = currentData.filter(item => item.bucketStatus.blocked).length;
+    // 필터 적용
+    function applyFilters() {
+        searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        statusFilter = document.getElementById('statusFilter').value;
+
+        filteredData = allData.filter(function(item) {
+            const filename = item.bucketStatus.alarmInfo.filename.toLowerCase();
+            const message = item.bucketStatus.alarmInfo.message.toLowerCase();
+            const matchesSearch = searchTerm === '' || filename.includes(searchTerm) || message.includes(searchTerm);
+
+            let matchesStatus = true;
+            if (statusFilter === 'active') {
+                matchesStatus = !item.bucketStatus.blocked;
+            } else if (statusFilter === 'blocked') {
+                matchesStatus = item.bucketStatus.blocked;
+            }
+
+            return matchesSearch && matchesStatus;
+        });
+
+        if (viewMode === 'card') {
+            showCards();
+        } else {
+            showTable();
+        }
+    }
+
+    // 뷰 모드 변경
+    function changeViewMode(mode) {
+        viewMode = mode;
+
+        document.querySelectorAll('.view-mode-toggle .btn').forEach(function(btn) {
+            btn.classList.remove('active');
+        });
+
+        event.target.classList.add('active');
+
+        if (mode === 'card') {
+            document.getElementById('dataGrid').style.display = 'grid';
+            document.getElementById('tableContainer').style.display = 'none';
+            showCards();
+        } else {
+            document.getElementById('dataGrid').style.display = 'none';
+            document.getElementById('tableContainer').style.display = 'block';
+            showTable();
+        }
+    }
+
+    // 통계 표시
+    function showStats() {
+        const total = filteredData.length;
+        const blocked = filteredData.filter(item => item.bucketStatus.blocked).length;
         const active = total - blocked;
 
         document.getElementById('totalCount').textContent = total;
@@ -407,142 +724,340 @@
         document.getElementById('activeCount').textContent = active;
     }
 
-    // 데이터 정렬
-    function sortData(sortType) {
-        currentSort = sortType;
+    // TOP 3 표시
+    function showTop3() {
+        const top3 = allData
+            .sort((a, b) => b.bucketStatus.requestCount - a.bucketStatus.requestCount)
+            .slice(0, 3);
 
-        // 버튼 상태 업데이트
-        document.querySelectorAll('.sort-buttons .btn:not(.refresh-btn)').forEach(btn => {
-            btn.classList.remove('active');
+        const grid = document.getElementById('top3Grid');
+        grid.innerHTML = '';
+
+        top3.forEach(function(item, index) {
+            const div = document.createElement('div');
+            const rankClass = index === 0 ? 'first' : index === 1 ? 'second' : 'third';
+            const rankIcon = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
+
+            div.className = 'top3-card ' + rankClass;
+            div.innerHTML =
+                '<div class="top3-rank">' + rankIcon + '</div>' +
+                '<div class="top3-filename">' + item.bucketStatus.alarmInfo.filename + '</div>' +
+                '<div class="top3-count">' + item.bucketStatus.requestCount.toLocaleString() + '</div>' +
+                '<div class="top3-label">요청 수</div>';
+
+            grid.appendChild(div);
         });
-        // event.target.classList.add('active');
-
-        let sortedData = [...currentData];
-
-        switch(sortType) {
-            case 'requestCount':
-                sortedData.sort((a, b) => b.bucketStatus.requestCount - a.bucketStatus.requestCount);
-                break;
-            case 'blocked':
-                sortedData.sort((a, b) => {
-                    if (a.bucketStatus.blocked === b.bucketStatus.blocked) {
-                        return b.bucketStatus.requestCount - a.bucketStatus.requestCount;
-                    }
-                    return b.bucketStatus.blocked - a.bucketStatus.blocked;
-                });
-                break;
-            case 'resetTime':
-                sortedData.sort((a, b) => {
-                    const timeA = new Date(a.bucketStatus.nextReset);
-                    const timeB = new Date(b.bucketStatus.nextReset);
-                    return timeA - timeB;
-                });
-                break;
-        }
-
-        renderData(sortedData);
     }
 
-    // 데이터 렌더링
-    function renderData(data) {
+    // 차트 변경
+    function changeChart(type) {
+        chartType = type;
+
+        document.querySelectorAll('.view-toggle .btn').forEach(function(btn) {
+            btn.classList.remove('active');
+        });
+
+        event.target.classList.add('active');
+        showChart();
+    }
+
+    // 차트 표시
+    function showChart() {
+        const ctx = document.getElementById('requestChart').getContext('2d');
+
+        if (myChart) {
+            myChart.destroy();
+        }
+
+        let data = allData.slice();
+        let yValues, yLabel, colors;
+
+        if (chartType === 'requestCount') {
+            data.sort(function(a, b) {
+                return b.bucketStatus.requestCount - a.bucketStatus.requestCount;
+            });
+            data = data.slice(0, 10);
+            yValues = data.map(function(item) {
+                return item.bucketStatus.requestCount;
+            });
+            yLabel = '요청 수';
+            colors = data.map(function(item) {
+                return item.bucketStatus.blocked ? '#e74c3c' : '#3498db';
+            });
+        } else if (chartType === 'resetTime') {
+            data.sort(function(a, b) {
+                const timeA = new Date(a.bucketStatus.nextReset);
+                const timeB = new Date(b.bucketStatus.nextReset);
+                return timeA - timeB;
+            });
+            data = data.slice(0, 10);
+            yValues = data.map(function(item) {
+                const now = new Date();
+                const resetTime = new Date(item.bucketStatus.nextReset);
+                const diff = Math.max(0, resetTime - now);
+                return Math.floor(diff / (1000 * 60));
+            });
+            yLabel = '리셋까지 남은 시간 (분)';
+            colors = data.map(function(item) {
+                return item.bucketStatus.blocked ? '#e74c3c' : '#27ae60';
+            });
+        } else if (chartType === 'tokens') {
+            data.sort(function(a, b) {
+                return b.bucketStatus.availableTokens - a.bucketStatus.availableTokens;
+            });
+            data = data.slice(0, 10);
+            yValues = data.map(function(item) {
+                return item.bucketStatus.availableTokens;
+            });
+            yLabel = '남은 토큰 수';
+            colors = data.map(function(item) {
+                const tokens = item.bucketStatus.availableTokens;
+                if (tokens === 0) return '#e74c3c';
+                if (tokens <= 2) return '#f39c12';
+                return '#2ecc71';
+            });
+        }
+
+        myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(function(item) {
+                    return item.bucketStatus.alarmInfo.filename;
+                }),
+                datasets: [{
+                    label: yLabel,
+                    data: yValues,
+                    backgroundColor: colors,
+                    borderColor: colors,
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: yLabel
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: '파일명'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 카드 정렬
+    function sortCards(sortType) {
+        currentSort = sortType;
+
+        document.querySelectorAll('.sort-buttons .btn:not(.refresh-btn)').forEach(function(btn) {
+            btn.classList.remove('active');
+        });
+
+        event.target.classList.add('active');
+
+        if (viewMode === 'card') {
+            showCards();
+        } else {
+            showTable();
+        }
+    }
+
+    // 카드 표시
+    function showCards() {
+        let data = filteredData.slice();
+
+        if (currentSort === 'requestCount') {
+            data.sort(function(a, b) {
+                return b.bucketStatus.requestCount - a.bucketStatus.requestCount;
+            });
+        } else if (currentSort === 'blocked') {
+            data = data.filter(function(item) {
+                return item.bucketStatus.blocked;
+            });
+            data.sort(function(a, b) {
+                return b.bucketStatus.requestCount - a.bucketStatus.requestCount;
+            });
+        } else if (currentSort === 'active') {
+            data = data.filter(function(item) {
+                return !item.bucketStatus.blocked;
+            });
+            data.sort(function(a, b) {
+                return b.bucketStatus.requestCount - a.bucketStatus.requestCount;
+            });
+        } else if (currentSort === 'resetTime') {
+            data.sort(function(a, b) {
+                const timeA = new Date(a.bucketStatus.nextReset);
+                const timeB = new Date(b.bucketStatus.nextReset);
+                return timeA - timeB;
+            });
+        }
+
         const grid = document.getElementById('dataGrid');
         grid.innerHTML = '';
 
-        data.forEach(item => {
-            const card = createDataCard(item);
+        data.forEach(function(item) {
+            const card = makeCard(item);
             grid.appendChild(card);
         });
     }
 
-    // 데이터 카드 생성
-    function createDataCard(item) {
-        const { key, bucketStatus } = item;
-        const { alarmInfo, availableTokens, maxTokens, nextReset, blocked, requestCount } = bucketStatus;
+    // 테이블 표시
+    function showTable() {
+        let data = filteredData.slice();
 
-        const card = document.createElement('div');
-        card.className = `data-card ${blocked ? 'blocked' : ''}`;
+        if (currentSort === 'requestCount') {
+            data.sort(function(a, b) {
+                return b.bucketStatus.requestCount - a.bucketStatus.requestCount;
+            });
+        } else if (currentSort === 'blocked') {
+            data = data.filter(function(item) {
+                return item.bucketStatus.blocked;
+            });
+            data.sort(function(a, b) {
+                return b.bucketStatus.requestCount - a.bucketStatus.requestCount;
+            });
+        } else if (currentSort === 'active') {
+            data = data.filter(function(item) {
+                return !item.bucketStatus.blocked;
+            });
+            data.sort(function(a, b) {
+                return b.bucketStatus.requestCount - a.bucketStatus.requestCount;
+            });
+        } else if (currentSort === 'resetTime') {
+            data.sort(function(a, b) {
+                const timeA = new Date(a.bucketStatus.nextReset);
+                const timeB = new Date(b.bucketStatus.nextReset);
+                return timeA - timeB;
+            });
+        }
 
-        const resetTime = new Date(nextReset);
-        const formattedResetTime = resetTime.toLocaleString('ko-KR', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+
+        data.forEach(function(item) {
+            const row = makeTableRow(item);
+            tbody.appendChild(row);
         });
+    }
 
-        card.innerHTML = `
-                <div class="data-card-header">
-                    <div class="key-hash">#${key}</div>
-                    <div class="status-badge ${blocked ? 'blocked' : 'active'}">
-                        ${blocked ? '🚫 차단됨' : '✅ 활성'}
-                    </div>
-                </div>
+    // 테이블 행 생성
+    function makeTableRow(item) {
+        const bucket = item.bucketStatus;
+        const alarm = bucket.alarmInfo;
+        const resetTime = new Date(bucket.nextReset);
 
-                <div class="file-info">
-                    <h4>📁 ${alarmInfo.filename}</h4>
-                    <div class="file-path">${alarmInfo.filename}</div>
-                    <div class="message-text">💬 ${alarmInfo.message}</div>
-                </div>
+        const row = document.createElement('tr');
 
-                <div class="metrics">
-                    <div class="metric tokens">
-                        <div class="metric-value">${availableTokens}</div>
-                        <div class="metric-label">남은 토큰</div>
-                    </div>
-                    <div class="metric max-tokens">
-                        <div class="metric-value">${maxTokens}</div>
-                        <div class="metric-label">최대 토큰</div>
-                    </div>
-                    <div class="metric requests">
-                        <div class="metric-value">${requestCount.toLocaleString()}</div>
-                        <div class="metric-label">총 요청</div>
-                    </div>
-                </div>
+        let tokenClass = 'good';
+        if (bucket.availableTokens === 0) tokenClass = 'zero';
+        else if (bucket.availableTokens <= 2) tokenClass = 'low';
 
-                <div class="reset-time">
-                    <div class="reset-label">리셋 예정 시간</div>
-                    <div class="reset-value">${formattedResetTime}</div>
-                    <div class="countdown" data-reset-time="${nextReset}">
-                        ${getTimeRemaining(resetTime)}
-                    </div>
-                </div>
-            `;
+        row.innerHTML =
+            '<td class="table-filename">' + alarm.filename + '</td>' +
+            '<td class="table-message">' + alarm.message + '</td>' +
+            '<td><span class="table-status ' + (bucket.blocked ? 'blocked' : 'active') + '">' +
+            (bucket.blocked ? '차단됨' : '활성') + '</span></td>' +
+            '<td class="table-tokens ' + tokenClass + '">' +
+            bucket.availableTokens + '/' + bucket.maxTokens + '</td>' +
+            '<td class="table-requests">' + bucket.requestCount.toLocaleString() + '</td>' +
+            '<td>' + resetTime.toLocaleString('ko-KR', {month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'}) + '</td>' +
+            '<td class="table-countdown" data-reset-time="' + bucket.nextReset + '">' +
+            getRemainingTime(resetTime) + '</td>';
 
-        return card;
+        return row;
+    }
+
+    // 카드 생성
+    function makeCard(item) {
+        const key = item.key;
+        const bucket = item.bucketStatus;
+        const alarm = bucket.alarmInfo;
+
+        const div = document.createElement('div');
+        div.className = 'data-card' + (bucket.blocked ? ' blocked' : '');
+
+        const resetTime = new Date(bucket.nextReset);
+        const timeStr = resetTime.toLocaleString('ko-KR');
+
+        div.innerHTML =
+            '<div class="data-card-header">' +
+            '<div class="key-hash">#' + key + '</div>' +
+            '<div class="status-badge ' + (bucket.blocked ? 'blocked' : 'active') + '">' +
+            (bucket.blocked ? '🚫 차단됨' : '✅ 활성') +
+            '</div>' +
+            '</div>' +
+            '<div class="file-info">' +
+            '<h4>📁 ' + alarm.filename + '</h4>' +
+            '<div class="file-path">' + alarm.filename + '</div>' +
+            '<div class="message-text">💬 ' + alarm.message + '</div>' +
+            '</div>' +
+            '<div class="metrics">' +
+            '<div class="metric tokens">' +
+            '<div class="metric-value">' + bucket.availableTokens + '</div>' +
+            '<div class="metric-label">남은 토큰</div>' +
+            '</div>' +
+            '<div class="metric max-tokens">' +
+            '<div class="metric-value">' + bucket.maxTokens + '</div>' +
+            '<div class="metric-label">최대 토큰</div>' +
+            '</div>' +
+            '<div class="metric requests">' +
+            '<div class="metric-value">' + bucket.requestCount.toLocaleString() + '</div>' +
+            '<div class="metric-label">총 요청</div>' +
+            '</div>' +
+            '</div>' +
+            '<div class="reset-time">' +
+            '<div class="reset-label">리셋 예정 시간</div>' +
+            '<div class="reset-value">' + timeStr + '</div>' +
+            '<div class="countdown" data-reset-time="' + bucket.nextReset + '">' +
+            getRemainingTime(resetTime) +
+            '</div>' +
+            '</div>';
+
+        return div;
     }
 
     // 남은 시간 계산
-    function getTimeRemaining(resetTime) {
+    function getRemainingTime(resetTime) {
         const now = new Date();
         const diff = resetTime - now;
 
         if (diff <= 0) {
-            return '리셋 시간 초과';
+            return '리셋 시간 도과';
         }
 
         const minutes = Math.floor(diff / (1000 * 60));
         const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
         if (minutes > 0) {
-            return `${minutes}분 ${seconds}초 남음`;
+            return minutes + '분 ' + seconds + '초 남음';
         } else {
-            return `${seconds}초 남음`;
+            return seconds + '초 남음';
         }
     }
 
     // 카운트다운 업데이트
     function updateCountdowns() {
-        document.querySelectorAll('.countdown').forEach(element => {
+        document.querySelectorAll('.countdown').forEach(function(element) {
             const resetTime = new Date(element.dataset.resetTime);
-            element.textContent = getTimeRemaining(resetTime);
+            element.textContent = getRemainingTime(resetTime);
         });
     }
-
-    // 전역 함수로 정의 (버튼에서 호출용)
-    window.sortData = sortData;
-    window.loadData = loadData;
 </script>
 </body>
 </html>
