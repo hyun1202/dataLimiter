@@ -1,4 +1,4 @@
-package example.alarm.report;
+package example.alarm;
 
 public record AlarmInfo(
         String filename,

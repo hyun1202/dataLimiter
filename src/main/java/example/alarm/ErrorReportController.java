@@ -1,7 +1,5 @@
 package example.alarm;
 
-import example.alarm.report.AlarmInfo;
-import example.alarm.report.Bucket4jDataLimiter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -32,7 +30,7 @@ public class ErrorReportController {
     @GetMapping("/api/error")
     public ResponseEntity<?> reportError(@ModelAttribute AlarmInfo info) {
         
-        if (!limiter.isAllowed(info)) {
+        if (!limiter.consumeToken(info)) {
             throw new RuntimeException("too many request.. fileName: " + info.filename());
         }
         

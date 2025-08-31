@@ -1,4 +1,4 @@
-package example.alarm.report;
+package example.alarm.dashboard;
 
 import example.alarm.BucketCache;
 import example.alarm.BucketStatus;
@@ -11,22 +11,22 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
-public class ReportService {
+public class DashBoardService {
     private final BucketCache bucketCache;
 
-    public List<ReportDto> getAllBucket() {
+    public List<DashBoardDto> getAllBucket() {
         Map<Integer, BucketStatus> bucketMap = bucketCache.getBucketMap();
 
-        List<ReportDto> reportDtos = new ArrayList<>();
+        List<DashBoardDto> dashBoardDtos = new ArrayList<>();
 
         for (Map.Entry<Integer, BucketStatus> entry : bucketMap.entrySet()) {
             Integer key = entry.getKey();
             BucketStatus value = entry.getValue();
 
-            ReportDto reportDto = new ReportDto(key, value);
-            reportDtos.add(reportDto);
+            DashBoardDto dashBoardDto = new DashBoardDto(key, value);
+            dashBoardDtos.add(dashBoardDto);
         }
 
-        return reportDtos;
+        return dashBoardDtos;
     }
 }

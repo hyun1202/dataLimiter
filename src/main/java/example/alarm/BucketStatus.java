@@ -1,7 +1,6 @@
 package example.alarm;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import example.alarm.report.AlarmInfo;
 import io.github.bucket4j.Bucket;
 import lombok.Builder;
 import lombok.Getter;
@@ -18,19 +17,20 @@ public class BucketStatus {
     private final int maxTokens;           // 최대 토큰 수
     private LocalDateTime nextReset;
     private boolean blocked;         // 차단 여부
+    private int requestCount;
 
     @Builder
     public BucketStatus(Bucket bucket,
                         AlarmInfo alarmInfo,
                         int availableTokens,
                         int maxTokens,
-                        LocalDateTime nextReset) {
+                        Duration expiredTime) {
         this.bucket = bucket;
         this.alarmInfo = alarmInfo;
         this.availableTokens = availableTokens;
         this.maxTokens = maxTokens;
-        this.nextReset = nextReset;
-        this.blocked = maxTokens - availableTokens <= 0;
+        this.nextReset = resetExpiredTime(expiredTime);
+        this.blocked = availableTokens <= 0;
     }
 
     public synchronized void resetToken() {
@@ -38,15 +38,18 @@ public class BucketStatus {
         blocked = false;
     }
 
-    public synchronized void consumeToken() {
-        if (availableTokens < 0) {
+    public synchronized boolean consumeToken() {
+        requestCount += 1;
+        if (!bucket.tryConsume(1)) {
             blocked = true;
-            return;
+            return false;
         }
+
         this.availableTokens -= 1;
+        return true;
     }
 
-    public void resetExpiredTime(Duration duration) {
-        this.nextReset = LocalDateTime.now().plus(duration);
+    public LocalDateTime resetExpiredTime(Duration duration) {
+        return LocalDateTime.now().plus(duration);
     }
 }

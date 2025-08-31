@@ -45,7 +45,8 @@ if (scenario === 'random') {
 
 // 랜덤 값 생성 함수들
 function getRandomFilename() {
-    const randomNum = Math.floor(Math.random() * 10000) + 1; // 1,2,3,4 중 하나
+    // const randomNum = Math.floor(Math.random() * 10000) + 1;
+    const randomNum = Math.floor(Math.random() * 100) + 1; // 1,2,3,4 중 하나
     return `index.html${randomNum}`;
 }
 

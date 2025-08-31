@@ -2,7 +2,6 @@ package example.alarm;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import example.alarm.report.AlarmInfo;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import org.springframework.stereotype.Component;
@@ -19,8 +18,8 @@ public class BucketCache {
     // 각 파라미터 조합별로 개별 버킷 관리
     private final Cache<Integer, BucketStatus> buckets = Caffeine.newBuilder()
             .maximumSize(1000)
-//            .expireAfterWrite(Duration.ofMinutes(CACHE_EXPIRE_MIN))
-            .expireAfterWrite(Duration.ofSeconds(5))
+            .expireAfterWrite(Duration.ofMinutes(CACHE_EXPIRE_MIN))
+//            .expireAfterWrite(Duration.ofSeconds(5))
             .build();
 
     public int getKey(String... values) {
@@ -28,11 +27,10 @@ public class BucketCache {
         return key.hashCode();
     }
 
-    public Bucket getBucketOrCreate(AlarmInfo info) {
+    public BucketStatus getBucketOrCreate(AlarmInfo info) {
         int key = getKey(info.filename(), info.message());
 
-        BucketStatus bucketStatus = buckets.get(key, k -> createBucketStatus(info));
-        return bucketStatus.getBucket();
+        return buckets.get(key, k -> createBucketStatus(info));
     }
 
     public BucketStatus createBucketStatus(AlarmInfo info) {
@@ -41,6 +39,8 @@ public class BucketCache {
                 .alarmInfo(info)
                 .availableTokens(TOKEN_LIMIT)
                 .maxTokens(TOKEN_LIMIT)
+                .expiredTime(Duration.ofMinutes(TOKEN_REFILL_MIN))
+//                .expiredTime(Duration.ofSeconds(5))
                 .build();
     }
 
@@ -48,8 +48,8 @@ public class BucketCache {
         // 30분 동안 5개 허용하는 버킷 생성
         Bandwidth limit = Bandwidth.builder()
                 .capacity(TOKEN_LIMIT)
-//                .refillIntervally(TOKEN_LIMIT, Duration.ofMinutes(TOKEN_REFILL_MIN))
-                .refillIntervally(TOKEN_LIMIT, Duration.ofSeconds(5))
+                .refillIntervally(TOKEN_LIMIT, Duration.ofMinutes(TOKEN_REFILL_MIN))
+//                .refillIntervally(TOKEN_LIMIT, Duration.ofSeconds(5))
                 .build();
 
         return Bucket.builder()
