@@ -1,5 +1,7 @@
 package example.alarm;
 
+import example.alarm.report.AlarmInfo;
+import example.alarm.report.Bucket4jDataLimiter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -13,7 +15,7 @@ import java.util.Map;
 @Slf4j
 public class ErrorReportController {
     
-    private final Bucket4jDuplicateDataLimiter limiter;
+    private final Bucket4jDataLimiter limiter;
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> exception(Exception e) {
@@ -28,24 +30,24 @@ public class ErrorReportController {
     }
     
     @GetMapping("/api/error")
-    public ResponseEntity<?> reportError(
-            @RequestParam String filename,
-            @RequestParam String message) {
+    public ResponseEntity<?> reportError(@ModelAttribute AlarmInfo info) {
         
-        if (!limiter.isAllowed(filename, message)) {
-            throw new RuntimeException("too many request.. fileName: " + filename);
+        if (!limiter.isAllowed(info)) {
+            throw new RuntimeException("too many request.. fileName: " + info.filename());
         }
         
         // 에러 처리
-        processError(filename, message);
-        
+        processError(info);
+        long remainingTokens = limiter.getRemainingTokens(info);
+
+
         return ResponseEntity.ok(Map.of(
             "message", "에러 접수 완료",
-            "remaining", limiter.getRemainingTokens(filename, message)
+            "remaining", remainingTokens
         ));
     }
 
-    void processError(String filename, String message) {
-        log.info("filename={}, message={}", filename, message);
+    void processError(AlarmInfo info) {
+        log.info("filename={}, message={}", info.filename(), info.message());
     }
 }
