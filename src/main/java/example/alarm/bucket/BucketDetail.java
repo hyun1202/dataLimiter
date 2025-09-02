@@ -1,4 +1,4 @@
-package example.alarm;
+package example.alarm.bucket;
 
 public record BucketDetail(
         String filename,

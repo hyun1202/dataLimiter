@@ -1,5 +1,8 @@
 ### 요청
 GET localhost:8080/api/error?filename=in1dex.html1&message=undefindValue{}&uri=index.html?aaa=124&bbb=111&wpJson={\"test\":\"value\"}
 
+### 요청
+GET localhost:8080/api/error-cache?filename=in1dex.html1&message=undefindValue{}&uri=index.html?aaa=124&bbb=111&wpJson={\"test\":\"value\"}
+
 ### report
 GET localhost:8080/api/report/all

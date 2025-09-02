@@ -1,6 +1,6 @@
 package example.alarm.dashboard;
 
-import example.alarm.BucketStatus;
+import example.alarm.bucket.BucketStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 

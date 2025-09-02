@@ -1,5 +1,8 @@
 package example.alarm;
 
+import example.alarm.bucket.Bucket4jDataLimiter;
+import example.alarm.bucket.BucketDetail;
+import example.alarm.bucket.BucketRedisCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -14,6 +17,7 @@ import java.util.Map;
 public class ErrorReportController {
     
     private final Bucket4jDataLimiter limiter;
+    private final BucketRedisCacheService cacheService;
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> exception(Exception e) {
@@ -26,7 +30,24 @@ public class ErrorReportController {
                         "retryAfter", "30분 후"
                 ));
     }
-    
+
+    @GetMapping("/api/error-cache")
+    public ResponseEntity<?> reportErrorCache(BucketDetail info) {
+        if (!cacheService.consumeToken(info)) {
+            throw new RuntimeException("too many request.. fileName: " + info.filename());
+        }
+
+        // 에러 처리
+        processError(info);
+        long remainingTokens = cacheService.getRemainingTokens(info);
+
+
+        return ResponseEntity.ok(Map.of(
+                "message", "에러 접수 완료",
+                "remaining", remainingTokens
+        ));
+    }
+
     @GetMapping("/api/error")
     public ResponseEntity<?> reportError(BucketDetail info) {
         if (!limiter.consumeToken(info)) {

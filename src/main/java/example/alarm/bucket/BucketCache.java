@@ -1,4 +1,4 @@
-package example.alarm;
+package example.alarm.bucket;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -41,8 +41,8 @@ public class BucketCache {
                 .bucketDetail(info)
                 .availableTokens(TOKEN_LIMIT)
                 .maxTokens(TOKEN_LIMIT)
-                .expiredTime(Duration.ofMinutes(TOKEN_REFILL_MIN))
-//                .expiredTime(Duration.ofSeconds(5))
+                .resetInterval(Duration.ofMinutes(TOKEN_REFILL_MIN))
+//                .resetInterval(Duration.ofSeconds(5))
                 .build();
     }
 

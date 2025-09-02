@@ -1,7 +1,7 @@
 package example.alarm.dashboard;
 
-import example.alarm.BucketCache;
-import example.alarm.BucketStatus;
+import example.alarm.bucket.BucketCache;
+import example.alarm.bucket.BucketStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
