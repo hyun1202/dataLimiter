@@ -19,4 +19,10 @@ public class DashBoardController {
         List<DashBoardDto> result = dashBoardService.getAllBucket();
         return ResponseEntity.ok(result);
     }
+
+    @GetMapping("/api/report/redis/all")
+    public ResponseEntity<?> getAllBucketRedis() {
+        List<DashBoardDto> result = dashBoardService.getAllBucketRedis();
+        return ResponseEntity.ok(result);
+    }
 }

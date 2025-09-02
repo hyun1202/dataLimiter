@@ -1,6 +1,6 @@
-package example.alarm;
+package example.alarm.bucket;
 
-public record BucketDetail(
+public record BucketInfo(
         String filename,
         String message,
         String trace,

@@ -1,17 +1,18 @@
-package example.alarm;
+package example.alarm.bucket.caffeine;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import example.alarm.bucket.BucketInfo;
+import example.alarm.bucket.BucketStatus;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.Map;
-import java.util.UUID;
 
 @Component
-public class BucketCache {
+public class BucketLocalCache {
     private static final int CACHE_EXPIRE_MIN = 35;
     private static final int TOKEN_REFILL_MIN = 30;
     public static final int TOKEN_LIMIT = 5;
@@ -28,21 +29,22 @@ public class BucketCache {
         return key.hashCode();
     }
 
-    public BucketStatus getBucketOrCreate(BucketDetail info) {
+    public BucketStatus getBucketOrCreate(BucketInfo info) {
         int key = getKey(info.filename(), info.message());
 
-        return buckets.get(key, k -> createBucketStatus(info));
+        return buckets.get(key, k -> createBucketStatus(k, info));
     }
 
-    public BucketStatus createBucketStatus(BucketDetail info) {
+    public BucketStatus createBucketStatus(int key, BucketInfo info) {
         return BucketStatus.builder()
                 .bucket(createBucket())
-                .uuid(UUID.randomUUID().toString().substring(0, 7))
-                .bucketDetail(info)
+                .key(String.valueOf(key))
+                .filename(info.filename())
+                .message(info.message())
                 .availableTokens(TOKEN_LIMIT)
                 .maxTokens(TOKEN_LIMIT)
-                .expiredTime(Duration.ofMinutes(TOKEN_REFILL_MIN))
-//                .expiredTime(Duration.ofSeconds(5))
+                .resetInterval(Duration.ofMinutes(TOKEN_REFILL_MIN))
+//                .resetInterval(Duration.ofSeconds(5))
                 .build();
     }
 

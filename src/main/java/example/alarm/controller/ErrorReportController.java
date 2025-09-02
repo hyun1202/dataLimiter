@@ -1,10 +1,15 @@
-package example.alarm;
+package example.alarm.controller;
 
+import example.alarm.bucket.Bucket4jDataLimiter;
+import example.alarm.bucket.BucketInfo;
+import example.alarm.bucket.redis.BucketRedisCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
@@ -14,6 +19,7 @@ import java.util.Map;
 public class ErrorReportController {
     
     private final Bucket4jDataLimiter limiter;
+    private final BucketRedisCacheService cacheService;
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> exception(Exception e) {
@@ -26,10 +32,27 @@ public class ErrorReportController {
                         "retryAfter", "30분 후"
                 ));
     }
-    
+
+    @GetMapping("/api/error-cache")
+    public ResponseEntity<?> reportErrorCache(BucketInfo info) {
+        if (!cacheService.consumeToken(info)) {
+            throw new RuntimeException("too many request.. fileName: " + info.filename());
+        }
+
+        // 에러 처리
+        processError(info);
+        long remainingTokens = cacheService.getRemainingTokens(info);
+
+
+        return ResponseEntity.ok(Map.of(
+                "message", "에러 접수 완료",
+                "remaining", remainingTokens
+        ));
+    }
+
     @GetMapping("/api/error")
-    public ResponseEntity<?> reportError(BucketDetail info) {
-        if (!limiter.consumeToken(info)) {
+    public ResponseEntity<?> reportError(BucketInfo info) {
+        if (limiter.consumeToken(info) == null) {
             throw new RuntimeException("too many request.. fileName: " + info.filename());
         }
         
@@ -44,7 +67,7 @@ public class ErrorReportController {
         ));
     }
 
-    void processError(BucketDetail info) {
+    void processError(BucketInfo info) {
         log.info("filename={}, message={}", info.filename(), info.message());
     }
 }
