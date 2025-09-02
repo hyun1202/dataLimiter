@@ -494,7 +494,7 @@
             div.className = 'top3-card ' + rankClass;
             div.innerHTML =
                 '<div class="top3-rank">' + rankIcon + '</div>' +
-                '<div class="top3-filename">' + item.bucketStatus.alarmInfo.filename + '</div>' +
+                '<div class="top3-filename">' + item.bucketStatus.bucketDetail.filename + '</div>' +
                 '<div class="top3-count">' + item.bucketStatus.requestCount.toLocaleString() + '</div>' +
                 '<div class="top3-label">요청 수</div>';
 
@@ -575,7 +575,7 @@
             type: 'bar',
             data: {
                 labels: data.map(function(item) {
-                    return item.bucketStatus.alarmInfo.filename;
+                    return item.bucketStatus.bucketDetail.filename;
                 }),
                 datasets: [{
                     label: yLabel,
@@ -662,7 +662,7 @@
     function makeCard(item) {
         const key = item.key;
         const bucket = item.bucketStatus;
-        const alarm = bucket.alarmInfo;
+        const alarm = bucket.bucketDetail;
 
         const div = document.createElement('div');
         div.className = 'data-card' + (bucket.blocked ? ' blocked' : '');

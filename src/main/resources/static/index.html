@@ -509,6 +509,65 @@
             margin: 20px 0;
             text-align: center;
         }
+
+        /* 팝업 스타일 */
+        .popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .popup-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .popup-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 1.8rem;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .popup-close:hover {
+            color: #333;
+        }
+
+        .popup-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .popup-section {
+            margin-bottom: 25px;
+        }
+
+        .popup-section h4 {
+            color: #34495e;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
     </style>
 </head>
 <body>
@@ -555,7 +614,7 @@
         <div class="filter-row">
             <div class="filter-group">
                 <label class="filter-label">검색:</label>
-                <input type="text" id="searchInput" class="filter-input" placeholder="파일명 또는 메시지 검색..." oninput="applyFilters()">
+                <input type="text" id="searchInput" class="filter-input" placeholder="uuid 또는 파일명 입력" oninput="applyFilters()">
             </div>
             <div class="filter-group">
                 <label class="filter-label">상태:</label>
@@ -567,17 +626,15 @@
             </div>
         </div>
         <div class="view-mode-toggle">
-            <button class="btn primary" onclick="changeViewMode('card')">카드 보기</button>
             <button class="btn primary active" onclick="changeViewMode('table')">테이블 보기</button>
+            <button class="btn primary" onclick="changeViewMode('card')">카드 보기</button>
         </div>
     </div>
 
     <div class="controls">
-        <h3>카드 정렬</h3>
+        <h3>정렬</h3>
         <div class="sort-buttons">
             <button class="btn primary active" onclick="sortCards('requestCount')">요청 수 순</button>
-            <button class="btn primary" onclick="sortCards('blocked')">차단된 항목만</button>
-            <button class="btn primary" onclick="sortCards('active')">활성 항목만</button>
             <button class="btn primary" onclick="sortCards('resetTime')">리셋 시간 순</button>
             <button class="btn refresh-btn" onclick="refreshData()">새로고침</button>
         </div>
@@ -597,6 +654,7 @@
         <table class="data-table">
             <thead>
             <tr>
+                <th>uuid</th>
                 <th>파일명</th>
                 <th>메시지</th>
                 <th>상태</th>
@@ -609,6 +667,25 @@
             <tbody id="tableBody">
             </tbody>
         </table>
+    </div>
+</div>
+
+<!-- 팝업 -->
+<div id="popupOverlay" class="popup-overlay">
+    <div class="popup-content">
+        <button class="popup-close" onclick="closePopup()">&times;</button>
+
+        <div class="popup-title" id="popupTitle">상세 정보</div>
+
+        <div class="popup-section">
+            <h4>📍 URI</h4>
+            <div class="uri-display" id="popupUri"></div>
+        </div>
+
+        <div class="popup-section">
+            <h4>📊 WP JSON 데이터</h4>
+            <div class="json-display" id="popupWpJson"></div>
+        </div>
     </div>
 </div>
 
@@ -671,9 +748,9 @@
         statusFilter = document.getElementById('statusFilter').value;
 
         filteredData = allData.filter(function(item) {
-            const filename = item.bucketStatus.alarmInfo.filename.toLowerCase();
-            const message = item.bucketStatus.alarmInfo.message.toLowerCase();
-            const matchesSearch = searchTerm === '' || filename.includes(searchTerm) || message.includes(searchTerm);
+            const uuid = item.bucketStatus.uuid.toLowerCase();
+            const filename = item.bucketStatus.bucketDetail.filename.toLowerCase();
+            const matchesSearch = searchTerm === '' || filename.includes(searchTerm) || uuid.includes(searchTerm);
 
             let matchesStatus = true;
             if (statusFilter === 'active') {
@@ -741,7 +818,7 @@
             div.className = 'top3-card ' + rankClass;
             div.innerHTML =
                 '<div class="top3-rank">' + rankIcon + '</div>' +
-                '<div class="top3-filename">' + item.bucketStatus.alarmInfo.filename + '</div>' +
+                '<div class="top3-filename">' + item.bucketStatus.bucketDetail.filename + '</div>' +
                 '<div class="top3-count">' + item.bucketStatus.requestCount.toLocaleString() + '</div>' +
                 '<div class="top3-label">요청 수</div>';
 
@@ -822,7 +899,7 @@
             type: 'bar',
             data: {
                 labels: data.map(function(item) {
-                    return item.bucketStatus.alarmInfo.filename;
+                    return item.bucketStatus.bucketDetail.filename;
                 }),
                 datasets: [{
                     label: yLabel,
@@ -914,6 +991,9 @@
         data.forEach(function(item) {
             const card = makeCard(item);
             grid.appendChild(card);
+            card.onclick = function() {
+                openPopup(item);
+            };
         });
     }
 
@@ -953,13 +1033,16 @@
         data.forEach(function(item) {
             const row = makeTableRow(item);
             tbody.appendChild(row);
+            row.onclick = function() {
+                openPopup(item);
+            };
         });
     }
 
     // 테이블 행 생성
     function makeTableRow(item) {
         const bucket = item.bucketStatus;
-        const alarm = bucket.alarmInfo;
+        const alarm = bucket.bucketDetail;
         const resetTime = new Date(bucket.nextReset);
 
         const row = document.createElement('tr');
@@ -969,6 +1052,7 @@
         else if (bucket.availableTokens <= 2) tokenClass = 'low';
 
         row.innerHTML =
+            '<td class="table-filename">' + bucket.uuid + '</td>' +
             '<td class="table-filename">' + alarm.filename + '</td>' +
             '<td class="table-message">' + alarm.message + '</td>' +
             '<td><span class="table-status ' + (bucket.blocked ? 'blocked' : 'active') + '">' +
@@ -987,7 +1071,7 @@
     function makeCard(item) {
         const key = item.key;
         const bucket = item.bucketStatus;
-        const alarm = bucket.alarmInfo;
+        const alarm = bucket.bucketDetail;
 
         const div = document.createElement('div');
         div.className = 'data-card' + (bucket.blocked ? ' blocked' : '');
@@ -997,7 +1081,7 @@
 
         div.innerHTML =
             '<div class="data-card-header">' +
-            '<div class="key-hash">#' + key + '</div>' +
+            '<div class="key-hash"> uuid: ' + bucket.uuid + '</div>' +
             '<div class="status-badge ' + (bucket.blocked ? 'blocked' : 'active') + '">' +
             (bucket.blocked ? '🚫 차단됨' : '✅ 활성') +
             '</div>' +
@@ -1038,7 +1122,7 @@
         const diff = resetTime - now;
 
         if (diff <= 0) {
-            return '리셋 시간 도과';
+            return '토큰 리필 완료';
         }
 
         const minutes = Math.floor(diff / (1000 * 60));
@@ -1058,6 +1142,47 @@
             element.textContent = getRemainingTime(resetTime);
         });
     }
+
+    // 팝업 열기
+    function openPopup(item) {
+        const detail = item.bucketStatus.bucketDetail;
+
+        document.getElementById('popupTitle').textContent = `상세 정보 - Key: ${item.key}`;
+        document.getElementById('popupUri').textContent = detail.uri || '정보 없음';
+
+        // wpJson 파싱해서 예쁘게 표시
+        try {
+            if (detail.wpJson) {
+                const parsed = JSON.parse(detail.wpJson);
+                document.getElementById('popupWpJson').textContent = JSON.stringify(parsed, null, 2);
+            } else {
+                document.getElementById('popupWpJson').textContent = '데이터 없음';
+            }
+        } catch (e) {
+            document.getElementById('popupWpJson').textContent = detail.wpJson || '파싱할 수 없는 데이터';
+        }
+
+        document.getElementById('popupOverlay').style.display = 'flex';
+    }
+
+    // 팝업 닫기
+    function closePopup() {
+        document.getElementById('popupOverlay').style.display = 'none';
+    }
+
+    // 팝업 외부 클릭 시 닫기
+    document.getElementById('popupOverlay').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closePopup();
+        }
+    });
+
+    // ESC 키로 팝업 닫기
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closePopup();
+        }
+    });
 </script>
 </body>
 </html>

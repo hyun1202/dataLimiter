@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.UUID;
 
 @Component
 public class BucketCache {
@@ -27,16 +28,17 @@ public class BucketCache {
         return key.hashCode();
     }
 
-    public BucketStatus getBucketOrCreate(AlarmInfo info) {
+    public BucketStatus getBucketOrCreate(BucketDetail info) {
         int key = getKey(info.filename(), info.message());
 
         return buckets.get(key, k -> createBucketStatus(info));
     }
 
-    public BucketStatus createBucketStatus(AlarmInfo info) {
+    public BucketStatus createBucketStatus(BucketDetail info) {
         return BucketStatus.builder()
                 .bucket(createBucket())
-                .alarmInfo(info)
+                .uuid(UUID.randomUUID().toString().substring(0, 7))
+                .bucketDetail(info)
                 .availableTokens(TOKEN_LIMIT)
                 .maxTokens(TOKEN_LIMIT)
                 .expiredTime(Duration.ofMinutes(TOKEN_REFILL_MIN))

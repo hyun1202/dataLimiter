@@ -28,8 +28,7 @@ public class ErrorReportController {
     }
     
     @GetMapping("/api/error")
-    public ResponseEntity<?> reportError(@ModelAttribute AlarmInfo info) {
-        
+    public ResponseEntity<?> reportError(BucketDetail info) {
         if (!limiter.consumeToken(info)) {
             throw new RuntimeException("too many request.. fileName: " + info.filename());
         }
@@ -45,7 +44,7 @@ public class ErrorReportController {
         ));
     }
 
-    void processError(AlarmInfo info) {
+    void processError(BucketDetail info) {
         log.info("filename={}, message={}", info.filename(), info.message());
     }
 }

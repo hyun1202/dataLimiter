@@ -12,7 +12,8 @@ import java.time.LocalDateTime;
 public class BucketStatus {
     @JsonIgnore
     private final Bucket bucket;
-    private final AlarmInfo alarmInfo;
+    private final String uuid;
+    private final BucketDetail bucketDetail;
     private int availableTokens;     // 남은 토큰 수
     private final int maxTokens;           // 최대 토큰 수
     private LocalDateTime nextReset;
@@ -21,12 +22,14 @@ public class BucketStatus {
 
     @Builder
     public BucketStatus(Bucket bucket,
-                        AlarmInfo alarmInfo,
+                        String uuid,
+                        BucketDetail bucketDetail,
                         int availableTokens,
                         int maxTokens,
                         Duration expiredTime) {
         this.bucket = bucket;
-        this.alarmInfo = alarmInfo;
+        this.uuid = uuid;
+        this.bucketDetail = bucketDetail;
         this.availableTokens = availableTokens;
         this.maxTokens = maxTokens;
         this.nextReset = resetExpiredTime(expiredTime);
