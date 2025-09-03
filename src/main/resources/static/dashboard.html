@@ -252,6 +252,10 @@
             background: rgba(52, 152, 219, 0.05);
         }
 
+        .data-table tr {
+            cursor: pointer;
+        }
+
         .table-filename {
             font-family: 'Courier New', monospace;
             font-weight: 600;
@@ -310,6 +314,78 @@
             font-weight: 600;
             color: #e74c3c;
             font-size: 0.85rem;
+        }
+
+        /* Details 스타일 */
+        .details-row {
+            background: rgba(240, 248, 255, 0.8);
+            display: none;
+        }
+
+        .details-row.show {
+            display: table-row;
+        }
+
+        .details-content {
+            padding: 20px;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .details-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1rem;
+        }
+
+        .details-grid {
+            display: grid;
+            gap: 10px;
+        }
+
+        .detail-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .detail-item:hover {
+            background: #f8f9fa;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .detail-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .detail-uuid {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #3498db;
+        }
+
+        .detail-date {
+            font-size: 0.8rem;
+            color: #7f8c8d;
+        }
+
+        .detail-uri {
+            font-size: 0.9rem;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .detail-trace {
+            font-size: 0.8rem;
+            color: #95a5a6;
+            font-style: italic;
         }
 
         .filters {
@@ -568,6 +644,31 @@
             margin-bottom: 10px;
             font-size: 1.1rem;
         }
+
+        .popup-textarea {
+            width: 100%;
+            min-height: 300px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            resize: vertical;
+        }
+
+        .popup-textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .popup-uri {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            word-break: break-all;
+            border: 1px solid #e0e0e0;
+        }
     </style>
 </head>
 <body>
@@ -614,7 +715,7 @@
         <div class="filter-row">
             <div class="filter-group">
                 <label class="filter-label">검색:</label>
-                <input type="text" id="searchInput" class="filter-input" placeholder="uuid 또는 파일명 입력" oninput="applyFilters()">
+                <input type="text" id="searchInput" class="filter-input" placeholder="key 또는 파일명 입력" oninput="applyFilters()">
             </div>
             <div class="filter-group">
                 <label class="filter-label">상태:</label>
@@ -654,7 +755,7 @@
         <table class="data-table">
             <thead>
             <tr>
-                <th>uuid</th>
+                <th>key</th>
                 <th>파일명</th>
                 <th>메시지</th>
                 <th>상태</th>
@@ -679,12 +780,12 @@
 
         <div class="popup-section">
             <h4>📍 URI</h4>
-            <div class="uri-display" id="popupUri"></div>
+            <div class="popup-uri" id="popupUri"></div>
         </div>
 
         <div class="popup-section">
             <h4>📊 WP JSON 데이터</h4>
-            <div class="json-display" id="popupWpJson"></div>
+            <textarea class="popup-textarea" id="popupWpJson" readonly></textarea>
         </div>
     </div>
 </div>
@@ -748,9 +849,20 @@
         statusFilter = document.getElementById('statusFilter').value;
 
         filteredData = allData.filter(function(item) {
-            const uuid = item.bucketStatus.uuid.toLowerCase();
-            const filename = item.bucketStatus.bucketDetail.filename.toLowerCase();
-            const matchesSearch = searchTerm === '' || filename.includes(searchTerm) || uuid.includes(searchTerm);
+            const key = String(item.key).toLowerCase();
+            const filename = item.bucketStatus.filename.toLowerCase();
+
+            // === 추가된 기능: details의 uuid로도 검색 가능 ===
+            // bucketDetails 배열에서 uuid가 검색어와 일치하는지 확인
+            const hasMatchingDetailUuid = item.bucketStatus.bucketDetails.some(function(detail) {
+                return detail.uuid.toLowerCase().includes(searchTerm);
+            });
+            // === 검색 기능 확장 끝 ===
+
+            const matchesSearch = searchTerm === '' ||
+                filename.includes(searchTerm) ||
+                key.includes(searchTerm) ||
+                hasMatchingDetailUuid; // details uuid 검색 조건 추가
 
             let matchesStatus = true;
             if (statusFilter === 'active') {
@@ -818,7 +930,7 @@
             div.className = 'top3-card ' + rankClass;
             div.innerHTML =
                 '<div class="top3-rank">' + rankIcon + '</div>' +
-                '<div class="top3-filename">' + item.bucketStatus.bucketDetail.filename + '</div>' +
+                '<div class="top3-filename">' + item.bucketStatus.filename + '</div>' +
                 '<div class="top3-count">' + item.bucketStatus.requestCount.toLocaleString() + '</div>' +
                 '<div class="top3-label">요청 수</div>';
 
@@ -899,7 +1011,7 @@
             type: 'bar',
             data: {
                 labels: data.map(function(item) {
-                    return item.bucketStatus.bucketDetail.filename;
+                    return item.bucketStatus.filename;
                 }),
                 datasets: [{
                     label: yLabel,
@@ -991,9 +1103,6 @@
         data.forEach(function(item) {
             const card = makeCard(item);
             grid.appendChild(card);
-            card.onclick = function() {
-                openPopup(item);
-            };
         });
     }
 
@@ -1033,16 +1142,21 @@
         data.forEach(function(item) {
             const row = makeTableRow(item);
             tbody.appendChild(row);
-            row.onclick = function() {
-                openPopup(item);
-            };
+
+            // details row 추가
+            const detailsRow = makeDetailsRow(item);
+            tbody.appendChild(detailsRow);
+
+            // 클릭 이벤트
+            row.addEventListener('click', function() {
+                toggleDetailsRow(detailsRow);
+            });
         });
     }
 
     // 테이블 행 생성
     function makeTableRow(item) {
         const bucket = item.bucketStatus;
-        const alarm = bucket.bucketDetail;
         const resetTime = new Date(bucket.nextReset);
 
         const row = document.createElement('tr');
@@ -1052,9 +1166,9 @@
         else if (bucket.availableTokens <= 2) tokenClass = 'low';
 
         row.innerHTML =
-            '<td class="table-filename">' + bucket.uuid + '</td>' +
-            '<td class="table-filename">' + alarm.filename + '</td>' +
-            '<td class="table-message">' + alarm.message + '</td>' +
+            '<td class="table-filename">' + item.key + '</td>' +
+            '<td class="table-filename">' + bucket.filename + '</td>' +
+            '<td class="table-message">' + bucket.message + '</td>' +
             '<td><span class="table-status ' + (bucket.blocked ? 'blocked' : 'active') + '">' +
             (bucket.blocked ? '차단됨' : '활성') + '</span></td>' +
             '<td class="table-tokens ' + tokenClass + '">' +
@@ -1067,11 +1181,88 @@
         return row;
     }
 
+    // Details 행 생성
+    function makeDetailsRow(item) {
+        const detailsRow = document.createElement('tr');
+        detailsRow.className = 'details-row';
+
+        const detailsCell = document.createElement('td');
+        detailsCell.colSpan = 8;
+
+        const detailsContent = document.createElement('div');
+        detailsContent.className = 'details-content';
+
+        const title = document.createElement('div');
+        title.className = 'details-title';
+        title.textContent = 'Bucket Details (' + item.bucketStatus.bucketDetails.length + '개)';
+        detailsContent.appendChild(title);
+
+        const grid = document.createElement('div');
+        grid.className = 'details-grid';
+
+        item.bucketStatus.bucketDetails.forEach(function(detail) {
+            const detailItem = document.createElement('div');
+            detailItem.className = 'detail-item';
+
+            const header = document.createElement('div');
+            header.className = 'detail-item-header';
+
+            const uuid = document.createElement('div');
+            uuid.className = 'detail-uuid';
+            uuid.textContent = '🔑 ' + detail.uuid;
+
+            const date = document.createElement('div');
+            date.className = 'detail-date';
+            const createdAt = new Date(detail.createdAt);
+            date.textContent = createdAt.toLocaleString('ko-KR');
+
+            header.appendChild(uuid);
+            header.appendChild(date);
+
+            const uri = document.createElement('div');
+            uri.className = 'detail-uri';
+            uri.textContent = '🌐 ' + (detail.uri || 'URI 정보 없음');
+
+            const trace = document.createElement('div');
+            trace.className = 'detail-trace';
+            trace.textContent = detail.trace || 'trace 정보 없음';
+
+            detailItem.appendChild(header);
+            detailItem.appendChild(uri);
+            detailItem.appendChild(trace);
+
+            // 클릭 이벤트 - 팝업 열기
+            detailItem.addEventListener('click', function() {
+                openDetailPopup(detail);
+            });
+
+            grid.appendChild(detailItem);
+        });
+
+        detailsContent.appendChild(grid);
+        detailsCell.appendChild(detailsContent);
+        detailsRow.appendChild(detailsCell);
+
+        return detailsRow;
+    }
+
+    // Details 행 토글
+    function toggleDetailsRow(detailsRow) {
+        if (detailsRow.classList.contains('show')) {
+            detailsRow.classList.remove('show');
+        } else {
+            // 다른 모든 details 행 숨기기
+            document.querySelectorAll('.details-row.show').forEach(function(row) {
+                row.classList.remove('show');
+            });
+            detailsRow.classList.add('show');
+        }
+    }
+
     // 카드 생성
     function makeCard(item) {
         const key = item.key;
         const bucket = item.bucketStatus;
-        const alarm = bucket.bucketDetail;
 
         const div = document.createElement('div');
         div.className = 'data-card' + (bucket.blocked ? ' blocked' : '');
@@ -1081,15 +1272,15 @@
 
         div.innerHTML =
             '<div class="data-card-header">' +
-            '<div class="key-hash"> uuid: ' + bucket.uuid + '</div>' +
+            '<div class="key-hash">Key: ' + key + '</div>' +
             '<div class="status-badge ' + (bucket.blocked ? 'blocked' : 'active') + '">' +
             (bucket.blocked ? '🚫 차단됨' : '✅ 활성') +
             '</div>' +
             '</div>' +
             '<div class="file-info">' +
-            '<h4>📁 ' + alarm.filename + '</h4>' +
-            '<div class="file-path">' + alarm.filename + '</div>' +
-            '<div class="message-text">💬 ' + alarm.message + '</div>' +
+            '<h4>📁 ' + bucket.filename + '</h4>' +
+            '<div class="file-path">' + bucket.filename + '</div>' +
+            '<div class="message-text">💬 ' + bucket.message + '</div>' +
             '</div>' +
             '<div class="metrics">' +
             '<div class="metric tokens">' +
@@ -1143,23 +1334,24 @@
         });
     }
 
-    // 팝업 열기
-    function openPopup(item) {
-        const detail = item.bucketStatus.bucketDetail;
-
-        document.getElementById('popupTitle').textContent = `상세 정보 - Key: ${item.key}`;
+    // Detail 팝업 열기
+    function openDetailPopup(detail) {
+        document.getElementById('popupTitle').textContent = `상세 정보 - UUID: ${detail.uuid}`;
         document.getElementById('popupUri').textContent = detail.uri || '정보 없음';
 
         // wpJson 파싱해서 예쁘게 표시
         try {
             if (detail.wpJson) {
-                const parsed = JSON.parse(detail.wpJson);
-                document.getElementById('popupWpJson').textContent = JSON.stringify(parsed, null, 2);
+                // 이스케이프된 JSON 문자열 처리
+                const unescapedJson = detail.wpJson.replace(/\\\"/g, '"');
+                const parsed = JSON.parse(unescapedJson);
+                document.getElementById('popupWpJson').value = JSON.stringify(parsed, null, 2);
             } else {
-                document.getElementById('popupWpJson').textContent = '데이터 없음';
+                document.getElementById('popupWpJson').value = '데이터 없음';
             }
         } catch (e) {
-            document.getElementById('popupWpJson').textContent = detail.wpJson || '파싱할 수 없는 데이터';
+            console.log('JSON 파싱 에러:', e);
+            document.getElementById('popupWpJson').value = detail.wpJson || '파싱할 수 없는 데이터';
         }
 
         document.getElementById('popupOverlay').style.display = 'flex';
